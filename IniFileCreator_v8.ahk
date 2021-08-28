@@ -4,6 +4,14 @@ ScriptName = IniFileCreator %Version%
 A GUI to create ini files easily
 that can be used with the IniSettingsEditor function.
 
+=========
+; modded by Gewerd Strauss to automatically load file if run in the following syntax:
+
+lChooseFile:=false
+FedFile:= Path to File you want to load
+#Include %A_MyDocuments%\AutoHotkey\Lib\IniFileCreator_v8.ahk ; or whereever you are including this from.
+
+=========
 by toralf
 www.autohotkey.com/forum/viewtopic.php?p=69534#69534
 
@@ -63,11 +71,16 @@ changes since 1.4
 #SingleInstance force
 
 ;set working dir, in case this script is called from some other script in a different dir 
+CurrWorkDir:=A_WorkingDir
+;m(CurrWorkDir)
 SetWorkingDir, %A_ScriptDir%
-SplitPath, A_Scriptname, , , , OutNameNoExt, 
-IniFile = %OutNameNoExt%.ini
-IniFileNeedsSave := False
 
+
+SplitPath, A_Scriptname, , , , OutNameNoExt, 
+;IniFile = %OutNameNoExt%.ini
+;m(A_ScriptDir)
+IniFile = D:\DokumenteCSA\AutoHotkey\Lib\IniFileCreator_v8.ini
+IniFileNeedsSave := False
 GoSub, BuildGui
 
 KeyDataList = Type,Typ,For,Val,ChkN,Def,Hid,Opt,Des
@@ -76,116 +89,135 @@ SectionDataList = Type,Hid,Des
 Return
 ;end of auto-exec
 
-#Include Func_IniSettingsEditor_v6.ahk
+#Include %A_MyDocuments%\AutoHotkey\Lib\Func_IniSettingsEditor_v6.ahk
 
 BuildGui:
   ;create context menu
   ;resize all controls
-  IniRead, ResizeAllControls, %IniFile%, General, ResizeAllControls, 0
-  Menu, ContextMenu , Add, Resize All Controls (needs to restart), ToggleResizeAllControls
-  If ResizeAllControls
-      Menu, ContextMenu, ToggleCheck, Resize All Controls (needs to restart)
+;IniRead, ResizeAllControls, %IniFile%, General, ResizeAllControls, 0
+ResizeAllControls:=1
+Menu, ContextMenu , Add, Resize All Controls (needs to restart), ToggleResizeAllControls
+If ResizeAllControls
+	Menu, ContextMenu, ToggleCheck, Resize All Controls (needs to restart)
 
   ;tooltips
-  IniRead, ShowToolTips, %IniFile%, General, ShowToolTips, 1
-  Menu, ContextMenu , Add, Show Tooltips, ToggleShowToolTips
-  If ShowToolTips {
+;IniRead, ShowToolTips, %IniFile%, General, ShowToolTips, 1
+ShowToolTips:=1
+Menu, ContextMenu , Add, Show Tooltips, ToggleShowToolTips
+If ShowToolTips 
+{
       Menu, ContextMenu, ToggleCheck, Show Tooltips
       OnMessage(0x200,"WM_MOUSEMOVE")
-    }
+}
 
   ;create GUI 
-  Gui, 1:+Default +Resize +LabelGuiIniFileCreator
-  Gui, 1:Add, Button, vBtnOpenINI gBtnOpenINI Section x15 y60 , Open Ini
-  BtnOpenINI_TT = Open an existing ini to edit it
-  Gui, 1:Add, Button, vBtnEmptyIni gBtnEmptyIni x+1 ys Disabled, Empty Ini
-  BtnEmptyIni_TT = Start a new ini from scratch
-  Gui, 1:Add, Button, vBtnMoveItemUp gBtnMoveItem x+1 ys Disabled, Up
-  BtnMoveItemUp_TT = move selected section or key one position up
-  Gui, 1:Add, Button, vBtnMoveItemDown gBtnMoveItem x+1 ys Disabled, Down
-  BtnMoveItemDown_TT =  move selected section or key one position down
-  Gui, 1:Add, TreeView, vTrvSelect gTrvSelect xs y+2 w180 h240 0x400
-  TrvSelect_TT = selected section or key to modify them
-  Gui, 1:Add, Button, vBtnAdd gBtnAdd Section xs y+2, +
-  BtnAdd_TT = add or copy section or key to ini
-  Gui, 1:Add, Edit, vEdtName gNameChanged x+1 ys+1 w145 Disabled,
-  EdtName_TT = change the name of section or key
-  Gui, 1:Add, Button, vBtnRemove gBtnRemove x+1 ys Disabled, -
-  BtnRemove_TT = remove selected section or key from ini
+  ; Gui, 1: +Default +Resize +LabelGuiIniFileCreator
+Gui, 1: +Resize +LabelGuiIniFileCreator
+Gui, 1:Add, Button, vBtnOpenINI gBtnOpenINI Section x15 y60 , Open Ini
+BtnOpenINI_TT = Open an existing ini to edit it
+Gui, 1:Add, Button, vBtnEmptyIni gBtnEmptyIni x+1 ys Disabled, Empty Ini
+BtnEmptyIni_TT = Start a new ini from scratch
+Gui, 1:Add, Button, vBtnMoveItemUp gBtnMoveItem x+1 ys Disabled, Up
+BtnMoveItemUp_TT = move selected section or key one position up
+Gui, 1:Add, Button, vBtnMoveItemDown gBtnMoveItem x+1 ys Disabled, Down
+BtnMoveItemDown_TT =  move selected section or key one position down
+Gui, 1:Add, TreeView, vTrvSelect gTrvSelect xs y+2 w180 h240 0x400
+TrvSelect_TT = selected section or key to modify them
+Gui, 1:Add, Button, vBtnAdd gBtnAdd Section xs y+2, +
+BtnAdd_TT = add or copy section or key to ini
+Gui, 1:Add, Edit, vEdtName gNameChanged x+1 ys+1 w145 Disabled,
+EdtName_TT = change the name of section or key
+Gui, 1:Add, Button, vBtnRemove gBtnRemove x+1 ys Disabled, -
+BtnRemove_TT = remove selected section or key from ini
 
-  Gui, 1:Add, DropDownList, vDdlKeyType gDdlKeyType Choose9 x215 y85 w80 r10 Disabled
+Gui, 1:Add, DropDownList, vDdlKeyType gDdlKeyType Choose9 x215 y85 w80 r10 Disabled
               ,Text|Integer|Float|File|Folder|DateTime|Hotkey|DropDown|Checkbox
-  DdlKeyType_TT = choose a specific key type to limit input
-  Gui, 1:Add, Edit, vEdtKeyFormat gChangedField x300 y85 w255 Disabled,
-  EdtKeyFormat_TT = specify a predifined format or list of choices
-  Gui, 1:Add, Edit, vEdtKeyValue gChangedField x215 y135 w340 Disabled,
-  EdtKeyValue_TT = specify an initial value
-  Gui, 1:Add, CheckBox, vChkKeyDefault gChangedField x255 y115 Disabled, Use as default
-  ChkKeyDefault_TT = set inital value as default
-  Gui, 1:Add, CheckBox, vChkKeyHidden gChangedField x350 y115 Disabled, Hidden
-  ChkKeyHidden_TT = hide this section or key from user
-  Gui, 1:Add, Button, vBtnBrowseKeyValueEditor gBtnBrowseKeyValueEditor x505 y110 Hidden, B&rowse
-  BtnBrowseKeyValueEditor_TT = browse to file or folder
-  Gui, 1:Add, DateTime, vDatKeyValue gChangedField x215 y135 w340 Hidden,
-  DatKeyValue_TT = specify an initial value
-  Gui, 1:Add, Hotkey, vHotKeyValue gChangedField x215 y135 w340 Hidden,
-  HotKeyValue_TT = specify an initial value
-  Gui, 1:Add, DropDownList, vDdlKeyValue gChangedField x215 y135 w340 r10 Hidden,
-  DdlKeyValue_TT = select an initial value
-  Gui, 1:Add, CheckBox, vChkKeyValue gChangedField Check3 x215 y138 w25 Hidden,
-  ChkKeyValue_TT = specify the initial state
-  Gui, 1:Add, Edit, vEdtChkName gChangedField x240 y135 w315 Hidden,
-  EdtChkName_TT = specify a name for the checkbox
-  Gui, 1:Add, Edit, vEdtKeyOptions gChangedField x300 y162 w255 Disabled,
-  EdtKeyOptions_TT = add gui control options for the key type`nsee "GUI Control Types" in manual
-  Gui, 1:Add, Edit, vEdtKeyDes gChangedField x215 y210 w340 h75 Disabled,
-  EdtKeyDes_TT = add a description to help users to fill correct data
-  Gui, 1:Add, Edit, vEdtIniFile gEdtIniFile x265 y296 w265,
-  EdtIniFile_TT = specify an ini file this data is written to
-  Gui, 1:Add, Button, vBtnBrowseIniFile gBtnBrowseIniFile x535 y295, ...
-  BtnBrowseIniFile_TT = browse to an ini file
-  Gui, 1:Add, Button, vBtnTestIni gBtnTestIni x150 y360 w130 h30 Disabled, Test Ini
-  BtnTestIni_TT = show current ini how it will look like for the user
-  Gui, 1:Add, Button, vBtnSaveToFile gBtnSaveToFile x290 y360 w130 h30 Disabled, Save to file
-  BtnSaveToFile_TT = save current ini data to file
+DdlKeyType_TT = choose a specific key type to limit input
+Gui, 1:Add, Edit, vEdtKeyFormat gChangedField x300 y85 w255 Disabled,
+EdtKeyFormat_TT = specify a predifined format or list of choices
+Gui, 1:Add, Edit, vEdtKeyValue gChangedField x215 y135 w340 Disabled,
+EdtKeyValue_TT = specify an initial value
+Gui, 1:Add, CheckBox, vChkKeyDefault gChangedField x255 y115 Disabled, Use as default
+ChkKeyDefault_TT = set inital value as default
+Gui, 1:Add, CheckBox, vChkKeyHidden gChangedField x350 y115 Disabled, Hidden
+ChkKeyHidden_TT = hide this section or key from user
+Gui, 1:Add, Button, vBtnBrowseKeyValueEditor gBtnBrowseKeyValueEditor x505 y110 Hidden, B&rowse
+BtnBrowseKeyValueEditor_TT = browse to file or folder
+Gui, 1:Add, DateTime, vDatKeyValue gChangedField x215 y135 w340 Hidden,
+DatKeyValue_TT = specify an initial value
+Gui, 1:Add, Hotkey, vHotKeyValue gChangedField x215 y135 w340 Hidden,
+HotKeyValue_TT = specify an initial value
+Gui, 1:Add, DropDownList, vDdlKeyValue gChangedField x215 y135 w340 r10 Hidden,
+DdlKeyValue_TT = select an initial value
+Gui, 1:Add, CheckBox, vChkKeyValue gChangedField Check3 x215 y138 w25 Hidden,
+ChkKeyValue_TT = specify the initial state
+Gui, 1:Add, Edit, vEdtChkName gChangedField x240 y135 w315 Hidden,
+EdtChkName_TT = specify a name for the checkbox
+Gui, 1:Add, Edit, vEdtKeyOptions gChangedField x300 y162 w255 Disabled,
+EdtKeyOptions_TT = add gui control options for the key type`nsee "GUI Control Types" in manual
+Gui, 1:Add, Edit, vEdtKeyDes gChangedField x215 y210 w340 h75 Disabled,
+EdtKeyDes_TT = add a description to help users to fill correct data
+Gui, 1:Add, Edit, vEdtIniFile gEdtIniFile x265 y296 w265,
+EdtIniFile_TT = specify an ini file this data is written to
+Gui, 1:Add, Button, vBtnBrowseIniFile gBtnBrowseIniFile x535 y295, ...
+BtnBrowseIniFile_TT = browse to an ini file
+Gui, 1:Add, Button, vBtnTestIni gBtnTestIni x150 y360 w130 h30 Disabled, Test Ini
+BtnTestIni_TT = show current ini how it will look like for the user
+Gui, 1:Add, Button, vBtnSaveToFile gBtnSaveToFile x290 y360 w130 h30 Disabled, Save to file
+BtnSaveToFile_TT = save current ini data to file
 
-  Gui, 1:Add, GroupBox, vGrb x4 y48 w560 h305 , 
-  Gui, 1:Font, Bold 
-  Gui, 1:Add, Text, vTxtType x215 y65, Key Type 
-  Gui, 1:Add, Text, vTxtFormat x300 y65 w255, Format or List of Choices 
-  Gui, 1:Add, Text, vTxtValue x215 y115, Value 
-  Gui, 1:Add, Text, vTxtOptions x215 y165, Field Options 
-  Gui, 1:Add, Text, vTxtDescription x215 y190, Description 
-  Gui, 1:Add, Text, vTxtIniFile x215 y300, Ini File 
-  Gui, 1:Font, S16 CDefault Bold, Verdana 
-  Gui, 1:Add, Text, vTxtHeadline x45 y13 w480 h35 +Center, Create Ini file - Settings
+Gui, 1:Add, GroupBox, vGrb x4 y48 w560 h305 , 
+Gui, 1:Font, Bold 
+Gui, 1:Add, Text, vTxtType x215 y65, Key Type 
+Gui, 1:Add, Text, vTxtFormat x300 y65 w255, Format or List of Choices 
+Gui, 1:Add, Text, vTxtValue x215 y115, Value 
+Gui, 1:Add, Text, vTxtOptions x215 y165, Field Options 
+Gui, 1:Add, Text, vTxtDescription x215 y190, Description 
+Gui, 1:Add, Text, vTxtIniFile x215 y300, Ini File 
+Gui, 1:Font, S16 CDefault Bold, Verdana 
+Gui, 1:Add, Text, vTxtHeadline x45 y13 w480 h35 +Center, Create Ini file - Settings
 
   ;show Gui and get UniqueID
-  IniRead, GuiPos, %IniFile%, General, GuiPos, % ""
-  Gui, 1:Show, %GuiPos%, %ScriptName% - Create Ini file for IniSettingsEditor 
-  Gui, 1:+LastFound
-  GuiID := WinExist() 
-  OnMessage(0x24, "WM_GETMINMAXINFO")
+;SetWorkingDir, 
+;IniRead, GuiPos, %IniFile%, General, GuiPos, % x10 y20
+;m(IniFile,A_WorkingDir,GuiPos)
+GuiPos= x10 y20
+; vGuiSize= h750
+Gui, 1:Show, %GuiPos% %vGuiSize%, %ScriptName% - Create Ini file for IniSettingsEditor 
+Gui, 1:+LastFound
+GuiID := WinExist() 
+OnMessage(0x24, "WM_GETMINMAXINFO")
+if !lChooseFile
+{
+  ; gui, 1:hide
+   gosub, BtnOpenINI
+}
 Return
 
 ToggleShowToolTips:
-  ShowToolTips := not ShowToolTips
-  Menu, ContextMenu, ToggleCheck, Show Tooltips
-  If ShowToolTips
-      OnMessage(0x200,"WM_MOUSEMOVE")
-  Else
-      OnMessage(0x200,"")
+ShowToolTips := not ShowToolTips
+Menu, ContextMenu, ToggleCheck, Show Tooltips
+If ShowToolTips
+	OnMessage(0x200,"WM_MOUSEMOVE")
+Else
+	OnMessage(0x200,"")
 Return
 
 ;show tooltips after 1 second for 2.5 second when user moves mouse on a button 
 WM_MOUSEMOVE(wParam, lParam, msg, hwnd) { 
-    global ToolTipPrevControl
-    If (A_GuiControl <> ToolTipPrevControl) { 
-        ToolTipPrevControl := A_GuiControl
-        If (%ToolTipPrevControl%_TT <> "")  ;??? array in function
-            SetTimer, ShowToolTip, 1000
-      } 
-  } 
+	global ToolTipPrevControl
+	If (A_GuiControl <> ToolTipPrevControl) { 
+		ToolTipPrevControl := A_GuiControl
+	;MsgBox,,,%ToolTipPrevControl%_TT
+		;if !Instr(%ToolTipPrevControl%_TT,"&")
+			;If (%ToolTipPrevControl%_TT <> "")  ;??? array in function
+				;SetTimer, ShowToolTip, 1000
+		d:=ToolTipPrevControl . "_TT"
+		if !Instr(d,"&")
+			If (d <> "")  ;??? array in function
+				SetTimer, ShowToolTip, 1000
+	} 
+} 
 ShowToolTip:
   SetTimer, ShowToolTip, Off
   ToolTip, % %ToolTipPrevControl%_TT
@@ -307,7 +339,10 @@ BtnOpenINI:
   
   ;get new ini filename
   GuiControlGet, EdtIniFile
-  SelectFile("EdtIniFile", EdtIniFile, "to open","3","Ini files (*.ini)")
+  if (lChooseFile==true)
+	    SelectFile("EdtIniFile", EdtIniFile, "to open","3","Ini files (*.ini)")
+  else
+      SelectFile("EdtIniFile", EdtIniFile, "to open","3","Ini files (*.ini)",1,FedFile)
   GuiControlGet, EdtIniFile
 
   ;read data from ini file, build tree and store values and description in arrays 
@@ -855,7 +890,7 @@ BtnBrowseIniFile:
   SelectFile("EdtIniFile", EdtIniFile, "to save ini settings","S16","Ini files (*.ini)")
 Return
 
-SelectFile(Control, OldFile, Text, Options="", Extentions=""){
+SelectFile(Control, OldFile, Text, Options="", Extentions="",FileFed:=0,FedFile=""){
     Gui, 1:+OwnDialogs
     IfExist %A_ScriptDir%\%OldFile%
         StartFolder = %A_ScriptDir%
@@ -863,7 +898,11 @@ SelectFile(Control, OldFile, Text, Options="", Extentions=""){
         SplitPath, OldFile, , StartFolder
     Else 
         StartFolder = 
-    FileSelectFile, SelectedFile, %Options%, %StartFolder%, Select file %Text%, %Extentions%
+
+    if !FileFed
+        FileSelectFile, SelectedFile, %Options%, %StartFolder%, Select file %Text%, %Extentions%
+    Else
+        SelectedFile:=FedFile
     If SelectedFile {
         StringReplace, SelectedFile, SelectedFile, %A_ScriptDir%\
         GuiControl, 1: ,%Control%, %SelectedFile%
@@ -897,12 +936,12 @@ SelectFolder(Control, OldPath, Text, Options=3){
         StringReplace, SelectedDir, SelectedDir, %A_ScriptDir%\
         GuiControl, 1: ,%Control%, %SelectedDir%
       }
-  }
+}
 
-  
-#Include ../Anchor/Anchor_v3.3.ahk     ;http://www.autohotkey.com/forum/viewtopic.php?t=4348
+
+#Include D:\DokumenteCSA\AutoHotkey\Lib\Anchor_v3.3.ahk     ;http://www.autohotkey.com/forum/viewtopic.php?t=4348
 GuiIniFileCreatorSize:
-  If ResizeAllControls {
+If ResizeAllControls {
       ;       ControlName        , xwyh with factors [, True for MoveDraw]
       Anchor("TrvSelect"         ,"w0.5h")      
       Anchor("BtnAdd"            ,"y",true)  
